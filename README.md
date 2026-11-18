@@ -2,7 +2,7 @@
 
 Offline cash-counting app for Android and iOS. Count by denomination, compare expected cash and export closing reports.
 
-[Live Preview](https://michalmachalik.github.io/Aardvarkland-CashTally-Public/) · [Open the counter](https://michalmachalik.github.io/Aardvarkland-CashTally-Public/app/)
+[Live Preview](https://michalmachalik.github.io/Aardvarkland-CashTally/) · [Open the counter](https://michalmachalik.github.io/Aardvarkland-CashTally/app/)
 
 The preview uses sample data in the browser. Native file sharing, printing, app locking and platform storage are represented by browser alternatives.
 
@@ -29,8 +29,8 @@ python -m http.server 4173 --bind 127.0.0.1 --directory preview
 Requires Flutter 3.44+ with Dart 3.12+.
 
 ```bash
-git clone https://github.com/MichalMachalik/Aardvarkland-CashTally-Public.git
-cd Aardvarkland-CashTally-Public
+git clone https://github.com/MichalMachalik/Aardvarkland-CashTally.git
+cd Aardvarkland-CashTally
 flutter pub get
 flutter run
 ```
