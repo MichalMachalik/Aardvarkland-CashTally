@@ -26,7 +26,7 @@ python -m http.server 4173 --bind 127.0.0.1 --directory preview
 
 ## Run it
 
-Requires Flutter 3.44+ with Dart 3.12+.
+The [pinned Flutter SDK](.fvmrc) is 3.44.0 with Dart 3.12. Select an Android emulator, an attached device or an iOS simulator with `flutter devices`. iOS builds require macOS and Xcode.
 
 ```bash
 git clone https://github.com/MichalMachalik/Aardvarkland-CashTally.git
@@ -37,7 +37,10 @@ flutter run
 
 ## Checks
 
+The source validator reads the translation and build configuration files with Python and PyYAML. Run these checks from the project root after `flutter pub get`.
+
 ```bash
+python -m pip install PyYAML
 python scripts/verify_source.py
 python scripts/test_native_patcher.py
 flutter analyze

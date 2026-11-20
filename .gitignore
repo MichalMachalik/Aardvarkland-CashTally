@@ -45,4 +45,5 @@ key.properties
 **/node_modules/
 **/.dart_tool/
 **/.gradle/
+/android/.kotlin/
 **/__pycache__/
