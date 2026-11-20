@@ -19,26 +19,9 @@ static-analysis and APK-build job, and the iOS build job, stay unchanged.
 | Corrupt history with valid `.bak` | App restores the last valid history and preserves corrupt evidence |
 | Both copies corrupted | App surfaces a recovery-required error and blocks subsequent writes instead of overwriting history |
 
-The runner uses a **fresh driver invocation for each launch**, sharing the
-Android app sandbox between invocations. All runs use `flutter drive --keep-app-running`
-so the host runner controls process termination between launches. The test process pauses immediately
-after the selected persisted write; the host checks a flushed marker via
-`adb shell run-as` before terminating the **whole app process** using
-`am force-stop`. Merely throwing an exception or calling
-`tester.restartAndRestore()` would not provide this coverage.
+Each phase starts a fresh Android process and preserves the test application's sandbox. For a forced stop, the runner builds the debug integration-test APK for the selected checkpoint, installs it with `adb install -r`, clears its old checkpoint marker and launches the activity directly. Once the selected write has reached disk, the runner checks the new marker, force-stops the entire process and reads the marker again.
 
-Test artifacts are synthetic; no real customer exports or signatures are used.
-Intentional app-driver disconnects during crash stages are expected. The CI
-job passes only when the selected marker was observed **and** the independent
-cold-start verification proves data completeness.
-Every driver invocation has a host-side timeout, including installation and
-VM-service connection. CI retains stage logs and emulator diagnostics for
-failed launches as well as completed tests. Set `CASH_TALLY_TEST_DEVICE` to
-select a specific disposable emulator when several are connected.
-Each launch stops the previous test process, archives and clears its log,
-and resets only that emulator's debugger forwards. The driver connects
-directly through a fixed local VM-service port, avoiding a stale proxy from
-a preceding forced termination.
+A separate `flutter drive` launch verifies the recovered data after each stop. The round-trip and corrupted-history tests use the same driver. A missing checkpoint, failed assertion or timeout fails the job. CI retains stage logs and emulator diagnostics. Set `CASH_TALLY_TEST_DEVICE` to select a specific disposable emulator.
 
 ## Run locally
 

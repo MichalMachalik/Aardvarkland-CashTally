@@ -62,71 +62,34 @@ crash_at_checkpoint() {
   echo "==> Android forced termination after: $checkpoint"
   prepare_launch "crash-$checkpoint"
 
-  # The timeout also protects the runner if Flutter never attaches to VM service.
-  timeout --signal=TERM --kill-after=10s 600s \
-    flutter drive -d "$DEVICE_ID" \
-      --keep-app-running \
-      --no-dds \
-      --host-vmservice-port=8181 \
-      --no-pub \
-      --driver=test_driver/integration_test.dart \
-      --target=integration_test/android_backup_recovery_test.dart \
-      "--dart-define=CASH_TALLY_IT_MODE=crash" \
-      "--dart-define=CASH_TALLY_IT_CHECKPOINT=$checkpoint" \
-      >"$log" 2>&1 &
-  local driver_pid="$!"
-  local ready=0
-  local observed
+  # Only the app sandbox marker is needed for this phase. Starting the test APK
+  # directly lets Dart reach the write even when a debugger cannot attach.
+  timeout --signal=TERM --kill-after=10s 600s flutter build apk --debug --no-pub \
+    --target=integration_test/android_backup_recovery_test.dart \
+    --dart-define=CASH_TALLY_IT_MODE=crash \
+    "--dart-define=CASH_TALLY_IT_CHECKPOINT=$checkpoint" 2>&1 | tee "$log"
+  timeout 90s "${ADB[@]}" install -r -t build/app/outputs/flutter-apk/app-debug.apk
+  timeout 20s "${ADB[@]}" shell run-as "$PACKAGE" rm -f "$MARKER"
+  timeout 40s "${ADB[@]}" shell am start -W -n "$PACKAGE/.MainActivity"
 
-  # A marker is created only AFTER the journal/record write was confirmed and
-  # flushed on the Android sandbox. A crashed build that never reached the
-  # desired stage cannot accidentally count as a successful kill.
-  for _ in $(seq 1 240); do
+  local observed
+  local deadline=$((SECONDS + 120))
+  while (( SECONDS < deadline )); do
     observed="$(timeout 10s "${ADB[@]}" shell run-as "$PACKAGE" cat "$MARKER" 2>/dev/null | tr -d '\r\n' || true)"
     if [[ "$observed" == "$checkpoint" ]]; then
-      ready=1
       break
     fi
-    if ! kill -0 "$driver_pid" 2>/dev/null; then
-      break
-    fi
-    sleep 2
+    sleep 1
   done
-
-  if [[ "$ready" -ne 1 ]]; then
+  if [[ "$observed" != "$checkpoint" ]]; then
     echo "ERROR: checkpoint '$checkpoint' was never reached" >&2
-    tail -n 100 "$log" >&2 || true
-    kill "$driver_pid" 2>/dev/null || true
-    wait "$driver_pid" 2>/dev/null || true
     return 1
   fi
 
-  # Keep process termination under the host runner's control between launches.
-  # --keep-app-running leaves the test app available for this explicit stop.
-  # This is a real process termination, not tester.restartAndRestore() and
-  # not a thrown exception inside Dart. Android app data must remain intact.
   timeout 20s "${ADB[@]}" shell am force-stop "$PACKAGE"
-  echo "Force-stopped $PACKAGE at $checkpoint"
-
-  # flutter drive normally exits non-zero because the VM/service vanished.
-  # Some versions may wait instead; clean up the host process after 30 seconds.
-  for _ in $(seq 1 30); do
-    if ! kill -0 "$driver_pid" 2>/dev/null; then break; fi
-    sleep 1
-  done
-  if kill -0 "$driver_pid" 2>/dev/null; then
-    echo "Driver did not exit after Android force-stop; terminating host runner."
-    kill "$driver_pid" 2>/dev/null || true
-  fi
-  wait "$driver_pid" || true # VM-service disconnect is expected after force-stop
-  # The authoritative success criteria are the durable marker and the next
-  # independent process passing all data-integrity assertions.
-  observed="$(timeout 10s "${ADB[@]}" shell run-as "$PACKAGE" cat "$MARKER" 2>/dev/null | tr -d '\r\n' || true)"
+  observed="$(timeout 10s "${ADB[@]}" shell run-as "$PACKAGE" cat "$MARKER" | tr -d '\r\n')"
   if [[ "$observed" != "$checkpoint" ]]; then
     echo "ERROR: checkpoint marker disappeared after force-stop" >&2
-    "${ADB[@]}" shell pm path "$PACKAGE" >&2 || true
-    "${ADB[@]}" shell run-as "$PACKAGE" ls -la app_flutter/ >&2 || true
-    tail -n 100 "$log" >&2 || true
     return 1
   fi
   echo "Android stopped at the verified '$checkpoint' checkpoint"
