@@ -578,7 +578,11 @@ class _CountScreenState extends State<CountScreen> {
     final path = await FlutterFileDialog.pickFile(
       params: const OpenFileDialogParams(
         fileExtensionsFilter: <String>['csv', 'txt'],
-        mimeTypesFilter: <String>['text/csv', 'text/plain'],
+        mimeTypesFilter: <String>[
+          'text/csv',
+          'text/comma-separated-values',
+          'text/plain',
+        ],
         copyFileToCacheDir: true,
       ),
     );

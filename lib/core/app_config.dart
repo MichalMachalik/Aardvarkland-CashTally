@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 abstract final class AppConfig {
   static const String appName = 'Cash Tally';
-  static const String versionLabel = '0.4.1';
+  static const String versionLabel = '0.4.2';
 
   /// One-time non-consumable purchase in App Store Connect and Google Play.
   static const String adFreeLifetimeProductId = 'vycetka_full_unlock';
