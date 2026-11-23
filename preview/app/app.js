@@ -1001,12 +1001,44 @@ function saveSignature() { const canvas = $('signature-pad'); if (!canvas || !st
 function downloadBlob(name, content, type) { const url = URL.createObjectURL(new Blob([content], { type })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.rel = 'noopener'; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 function reportSession(id) { return state.sessions.find(item => item.id === id); }
 function sessionRows(session) { const map = Object.fromEntries((session.denomSnapshot || allDenoms(session.currency)).map(item => [item.id, item])); return Object.entries(session.qty).filter(([, quantity]) => Number(quantity)).map(([id, quantity]) => { const item = map[id] || { id, label: id, valueMinor: 0 }; return { label: item.label, quantity: Number(quantity), subtotal: item.valueMinor * Number(quantity), weight: weightLabel(item, session.currency) }; }); }
-function downloadCsv(id) { const session = reportSession(id); if (!session) return; const scale = 10 ** currencyFractionDigits(session.currency); const rows = [['Denomination', 'Quantity', 'Subtotal'], ...sessionRows(session).map(row => [row.label, row.quantity, row.subtotal / scale]), ['Total', '', session.total / scale]]; downloadBlob('cashtally-closing.csv', rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n'), 'text/csv;charset=utf-8'); }
+function closingCsv(session) {
+  const scale = 10 ** currencyFractionDigits(session.currency);
+  const rows = [
+    ['Denomination', 'Quantity', 'Subtotal'],
+    ...sessionRows(session).map(row => [row.label, row.quantity, row.subtotal / scale]),
+    ['Total', '', session.total / scale],
+  ];
+  return rows.map(row => row.map(value => {
+    const text = String(value);
+    const prefix = typeof value === 'string' && /^[\s\uFEFF]*[=+\-@＝＋－＠]/u.test(text) ? '\t' : '';
+    return '"' + prefix + text.replaceAll('"', '""') + '"';
+  }).join(',')).join('\n');
+}
+
+function downloadCsv(id) {
+  const session = reportSession(id);
+  if (!session) return;
+  downloadBlob('cashtally-closing.csv', closingCsv(session), 'text/csv;charset=utf-8');
+}
 function plainTextFor(session) { const lines = [tr('app'), session.closingTitle || tr('report'), `${tr('currency')}: ${session.currency}`, `${tr('total')}: ${money(session.total, session.currency)}`]; if (session.documentNumber) lines.push(session.documentNumber); sessionRows(session).forEach(row => lines.push(`${row.label} × ${row.quantity}${row.weight ? ` · ${row.weight}` : ''} = ${money(row.subtotal, session.currency)}`)); if (session.expectedMinor != null) lines.push(`${tr('expected')}: ${money(session.expectedMinor, session.currency)}`, `${tr('difference')}: ${money(session.difference || 0, session.currency)}`); if (session.floatMinor != null) lines.push(`${tr('float')}: ${money(session.floatMinor, session.currency)}`); if (session.pos) lines.push(`${tr('posReconciliation')}: ${session.pos.sourceFileName}`, `${tr('posHash')}: ${session.pos.sourceSha256}`); lines.push(`${tr('proofHash')}: ${session.closingHash || ''}`); return lines.join('\n'); }
 function downloadText(id) { const session = reportSession(id); if (!session) return; downloadBlob('cashtally-closing.txt', plainTextFor(session), 'text/plain;charset=utf-8'); }
 async function copyText(id) { const session = reportSession(id); if (!session) return; const text = plainTextFor(session); try { if (!navigator.clipboard?.writeText) throw new Error('clipboard-unavailable'); await navigator.clipboard.writeText(text); toast(tr('finalTextCopied')); } catch { downloadBlob('cashtally-closing.txt', text, 'text/plain;charset=utf-8'); toast(tr('text')); } }
 async function shareText(id) { const session = reportSession(id); if (!session) return; const text = plainTextFor(session); if (navigator.share) { try { await navigator.share({ title: tr('report'), text }); return; } catch (error) { if (error?.name === 'AbortError') return; } } await copyText(id); }
-async function shareCsv(id) { const session = reportSession(id); if (!session) return; const scale = 10 ** currencyFractionDigits(session.currency); const rows = [['Denomination', 'Quantity', 'Subtotal'], ...sessionRows(session).map(row => [row.label, row.quantity, row.subtotal / scale]), ['Total', '', session.total / scale]]; const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n'); const file = new File([csv], 'cashtally-closing.csv', { type: 'text/csv' }); if (navigator.share && navigator.canShare?.({ files: [file] })) { try { await navigator.share({ title: tr('report'), files: [file] }); return; } catch (error) { if (error?.name === 'AbortError') return; } } downloadBlob(file.name, csv, file.type); }
+async function shareCsv(id) {
+  const session = reportSession(id);
+  if (!session) return;
+  const csv = closingCsv(session);
+  const file = new File([csv], 'cashtally-closing.csv', { type: 'text/csv' });
+  if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ title: tr('report'), files: [file] });
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+    }
+  }
+  downloadBlob(file.name, csv, file.type);
+}
 
 async function deriveKey(password, salt) { const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']); return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']); }
 function bytesToBase64(bytes) { let binary = ''; bytes.forEach(byte => { binary += String.fromCharCode(byte); }); return btoa(binary); }

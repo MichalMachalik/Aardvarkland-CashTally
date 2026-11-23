@@ -462,8 +462,14 @@ class ClosingReportService {
     final rows = <List<String>>[
       <String>[l10n.tr('reportStartsWith'), ''],
       if (session.closingTitle.trim().isNotEmpty)
-        <String>[l10n.tr('closingTitle'), session.closingTitle.trim()],
-      <String>[l10n.tr('documentNumber'), session.documentNumber],
+        <String>[
+          l10n.tr('closingTitle'),
+          _spreadsheetText(session.closingTitle.trim()),
+        ],
+      <String>[
+        l10n.tr('documentNumber'),
+        _spreadsheetText(session.documentNumber),
+      ],
       <String>[
         l10n.tr('createdAt'),
         AppFormatters.dateTime(session.createdAt, localeCode: localeCode),
@@ -480,8 +486,14 @@ class ClosingReportService {
       ],
       if (session.posReport != null) ...<List<String>>[
         <String>[l10n.tr('posReconciliation'), ''],
-        <String>[l10n.tr('posReportId'), session.posReport!.id],
-        <String>[l10n.tr('posSource'), session.posReport!.sourceFileName],
+        <String>[
+          l10n.tr('posReportId'),
+          _spreadsheetText(session.posReport!.id),
+        ],
+        <String>[
+          l10n.tr('posSource'),
+          _spreadsheetText(session.posReport!.sourceFileName),
+        ],
         <String>[
           l10n.tr('posExpectedCash'),
           currency.formatMinor(
@@ -517,7 +529,7 @@ class ClosingReportService {
           .where((item) => session.quantityFor(item) > 0)
           .map(
             (item) => <String>[
-              _denominationLabel(item, localeCode, l10n),
+              _spreadsheetText(_denominationLabel(item, localeCode, l10n)),
               '${session.quantityFor(item)}',
               currency.formatMinor(
                 item.minorUnits * session.quantityFor(item),
@@ -575,12 +587,18 @@ class ClosingReportService {
             localeCode: localeCode,
           ),
         ],
-      <String>[l10n.tr('note'), session.note],
-      <String>[l10n.tr('closingIdentitySentence'), _identitySentence(session)],
+      <String>[l10n.tr('note'), _spreadsheetText(session.note)],
+      <String>[
+        l10n.tr('closingIdentitySentence'),
+        _spreadsheetText(_identitySentence(session)),
+      ],
     ];
     final content = rows.map((row) => row.map(_csvCell).join(';')).join('\r\n');
     return Uint8List.fromList(utf8.encode('\uFEFFsep=;\r\n$content\r\n'));
   }
+
+  static String _spreadsheetText(String value) =>
+      RegExp(r'^[\s\uFEFF]*[=+\-@＝＋－＠]').hasMatch(value) ? '\t$value' : value;
 
   static String _csvCell(String value) {
     final escaped = value.replaceAll('"', '""');

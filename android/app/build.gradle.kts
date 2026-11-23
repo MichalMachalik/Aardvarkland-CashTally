@@ -23,6 +23,7 @@ val releaseSigningReady = listOf(
     "keyPassword",
 ).all(releaseSigningProperties::containsKey) &&
     file(releaseSigningProperties.getProperty("storeFile", "")).isFile
+val githubApk = providers.environmentVariable("AARDVARKLAND_GITHUB_APK").orNull == "1"
 
 android {
     namespace = "cz.vycetka.vycetka"
@@ -35,8 +36,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "cz.vycetka.vycetka"
+        applicationId = if (githubApk) "cz.aardvarkland.cashtally" else "cz.vycetka.vycetka"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

@@ -53,6 +53,25 @@ void main() {
     }
   });
 
+  test('CSV exports user text safely and preserves negative amounts', () {
+    const locale = Locale('cs');
+    final fixture = session.copyWith(
+      note: ' \n=1+2";konec',
+      closingTitle: '＋12',
+      businessName: '@QA',
+      expectedMinorUnits: 1015100,
+    );
+    final csv = utf8.decode(
+      service.buildCsv(session: fixture, currency: currency, locale: locale),
+    );
+
+    expect(csv, contains('"\t \n=1+2"";konec"'));
+    expect(csv, contains('"\t＋12"'));
+    expect(csv, contains('"\t@QA ·'));
+    final negative = currency.formatMinor(-100, localeCode: 'cs');
+    expect(csv, contains(';"$negative"\r\n'));
+  });
+
   test('plain-text closing has a localized header and complete totals', () {
     for (final locale in AppLocalizations.supportedLocales) {
       final l10n = AppLocalizations(locale);

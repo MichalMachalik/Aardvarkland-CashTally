@@ -4,7 +4,7 @@
 
 Offline cash-counting app for Android and iOS. Count by denomination, compare expected cash and export closing reports.
 
-[Live Preview](https://michalmachalik.github.io/Aardvarkland-CashTally/) · [Open the counter](https://michalmachalik.github.io/Aardvarkland-CashTally/app/)
+[Live Preview](https://michalmachalik.github.io/Aardvarkland-CashTally/) · [Open the counter](https://michalmachalik.github.io/Aardvarkland-CashTally/app/) · [Android APK](https://github.com/MichalMachalik/Aardvarkland-CashTally/releases/latest)
 
 The preview uses sample data in the browser. Native file sharing, printing, app locking and platform storage are represented by browser alternatives.
 
@@ -64,6 +64,8 @@ flutter build ios --release --no-codesign
 
 Sign release builds with your own Android keystore or Apple signing certificate; signing files are not included. Store transactions, biometrics, file pickers and printing need platform or device testing.
 
+The GitHub APK requires Android 7 or newer. It uses the package ID `cz.aardvarkland.cashtally` so it can coexist with earlier installations. To build an APK with that package ID, set `AARDVARKLAND_GITHUB_APK=1` before running `flutter build apk --release`.
+
 ## Data
 
 Amounts are stored as integer minor units. Reports, history and encrypted backups are created locally; the app does not require a server. Do not attach real till exports, signatures or business records to public issues.
@@ -83,7 +85,7 @@ Amounts are stored as integer minor units. Reports, history and encrypted backup
 
 Mobilní aplikace pro počítání hotovosti na Androidu a iOS funguje i offline. Obsluha spočítá hotovost podle nominálních hodnot, porovná ji s očekávaným stavem a vyexportuje uzávěrku.
 
-[Veřejný náhled](https://michalmachalik.github.io/Aardvarkland-CashTally/) · [Otevřít počítadlo](https://michalmachalik.github.io/Aardvarkland-CashTally/app/)
+[Veřejný náhled](https://michalmachalik.github.io/Aardvarkland-CashTally/) · [Otevřít počítadlo](https://michalmachalik.github.io/Aardvarkland-CashTally/app/) · [APK pro Android](https://github.com/MichalMachalik/Aardvarkland-CashTally/releases/latest)
 
 Náhled používá ukázková data v prohlížeči. Sdílení souborů, tisk, zámek aplikace a ukládání dat mají v náhledu webové alternativy. Pro místní spuštění zpřístupněte adresář `preview/` přes HTTP a otevřete `http://127.0.0.1:4173/`.
 
@@ -137,6 +139,8 @@ flutter build ios --release --no-codesign
 ```
 
 Vydání podepište vlastním klíčem pro Android nebo certifikátem Apple. Podpisové soubory si zajišťuje vydavatel. Nákupy přes obchod, biometrii, výběr souborů a tisk je třeba vyzkoušet na cílové platformě nebo zařízení.
+
+APK z GitHubu vyžaduje Android 7 nebo novější. Používá identifikátor `cz.aardvarkland.cashtally`, takže jde nainstalovat vedle dřívější aplikace. Pro sestavení s tímto identifikátorem nastavte `AARDVARKLAND_GITHUB_APK=1` před spuštěním `flutter build apk --release`.
 
 ### Ukládání dat
 

@@ -468,6 +468,22 @@ test('browser preview secondary settings, backup, blind count and exports remain
   await expect.poll(() => page.evaluate(() => window.__cashTallyPrintCalled)).toBe(true);
 });
 
+test('CSV download treats custom denomination labels as text', async ({ page }) => {
+  await page.goto(baseUrl + 'app/');
+  const result = await page.evaluate(() => {
+    const session = {
+      id: 'csv-fixture',
+      currency: 'CZK',
+      denomSnapshot: [{ id: 'token', label: ' =1+2", QA', valueMinor: 500 }],
+      qty: { token: 2 },
+      total: 1000,
+    };
+    state.sessions.push(session);
+    return closingCsv(session);
+  });
+  expect(result).toContain('"\t =1+2"", QA","2","10"');
+});
+
 test('the installed preview works offline without deleting another app cache', async ({ page, context }) => {
   await page.goto(new URL('preview.css', baseUrl).href);
   await page.evaluate(async () => { await caches.open('other-demo-cache'); });
