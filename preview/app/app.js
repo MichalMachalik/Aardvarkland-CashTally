@@ -1086,6 +1086,49 @@ function askBackupPassword(confirmPassword) {
   });
 }
 
+function backupData(source) {
+  const { sessions, templates, customDenoms, hiddenDenoms } = source;
+  return { sessions, templates, customDenoms, hiddenDenoms };
+}
+
+function mergeBackupRecords(current, incoming, replace = () => true) {
+  const byId = new Map(current.map(record => [record.id, record]));
+  for (const record of incoming) {
+    const existing = byId.get(record.id);
+    if (!existing || replace(record, existing)) byId.set(record.id, record);
+  }
+  return [...byId.values()];
+}
+
+function mergeBackupCurrencies(current, incoming, merge) {
+  const codes = new Set([...Object.keys(current), ...Object.keys(incoming)]);
+  return Object.fromEntries([...codes].map(code => [
+    code,
+    merge(Object.hasOwn(current, code) ? current[code] : [], Object.hasOwn(incoming, code) ? incoming[code] : []),
+  ]));
+}
+
+function mergeBackup(incoming) {
+  const records = items => Array.isArray(items) &&
+    items.every(item => item && typeof item.id === 'string' && item.id.length > 0);
+  const currencyLists = (groups, check) => groups && typeof groups === 'object' &&
+    !Array.isArray(groups) && Object.entries(groups).every(([code, items]) => /^[A-Z]{3}$/.test(code) && check(items));
+  if (!records(incoming?.sessions) || !records(incoming.templates) ||
+      !currencyLists(incoming.customDenoms, records) ||
+      !currencyLists(incoming.hiddenDenoms, items => Array.isArray(items) && items.every(id => typeof id === 'string'))) {
+    throw new Error('Unknown backup contents');
+  }
+
+  const updated = session => Date.parse(session.updatedAt ?? session.createdAt) || 0;
+  return {
+    sessions: mergeBackupRecords(state.sessions, incoming.sessions, (item, existing) => updated(item) > updated(existing))
+      .sort((a, b) => updated(b) - updated(a)),
+    templates: mergeBackupRecords(state.templates, incoming.templates),
+    customDenoms: mergeBackupCurrencies(state.customDenoms, incoming.customDenoms, mergeBackupRecords),
+    hiddenDenoms: mergeBackupCurrencies(state.hiddenDenoms, incoming.hiddenDenoms, (current, next) => [...new Set([...current, ...next])]),
+  };
+}
+
 async function exportBackup() {
   if (!globalThis.crypto?.subtle) return toast(backupCopy().unavailable);
   const password = await askBackupPassword(true);
@@ -1094,13 +1137,13 @@ async function exportBackup() {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const key = await deriveKey(password, salt);
-    const clear = new TextEncoder().encode(JSON.stringify({ ...state, modal: null, locked: false }));
+    const clear = new TextEncoder().encode(JSON.stringify(backupData(state)));
     const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, clear);
-    const backupData = {
+    const envelope = {
       version: 1, algorithm: 'AES-256-GCM', iterations: 210000,
       salt: bytesToBase64(salt), iv: bytesToBase64(iv), data: bytesToBase64(new Uint8Array(cipher)),
     };
-    downloadBlob('cashtally-preview-backup.json', JSON.stringify(backupData, null, 2), 'application/json');
+    downloadBlob('cashtally-preview-backup.json', JSON.stringify(envelope, null, 2), 'application/json');
     toast(tr('backupSaved'));
   } catch {
     toast(backupCopy().failed);
@@ -1109,7 +1152,6 @@ async function exportBackup() {
 
 async function importBackup(file) {
   if (!file) return;
-  const previousState = state;
   try {
     if (file.size > 64 * 1024 * 1024) throw new Error('Backup exceeds size limit');
     const payload = JSON.parse(await file.text());
@@ -1123,21 +1165,14 @@ async function importBackup(file) {
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64ToBytes(payload.iv) }, key, base64ToBytes(payload.data));
       imported = JSON.parse(new TextDecoder().decode(plain));
     }
-    if (!Array.isArray(imported?.sessions) || !Array.isArray(imported?.templates) ||
-        !imported.business || !imported.customDenoms || !imported.hiddenDenoms) {
-      throw new Error('Unknown backup contents');
-    }
-    const defaults = baseState();
-    const restored = Object.fromEntries(Object.keys(defaults).map((key) => [key, imported[key] ?? defaults[key]]));
-    state = {
-      ...restored, business: { ...defaults.business, ...restored.business },
-      screen: 'dashboard', modal: null, locked: false,
+    const restored = {
+      ...state, ...mergeBackup(imported), screen: 'dashboard', modal: null,
     };
-    persist();
+    persist(restored);
+    state = restored;
     render();
     toast(tr('saved'));
   } catch {
-    state = previousState;
     toast(backupCopy().invalid);
   }
 }

@@ -427,10 +427,29 @@ test('browser preview secondary settings, backup, blind count and exports remain
   await password.fill('Wrong-demo-42!');
   await confirm.click();
   await expect(page.locator('.toast.show')).toHaveText('Wrong password, damaged file or unsupported backup.');
+  await page.locator('.appbar .icon-btn').click();
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  const original = await page.evaluate(() => state.sessions[0]);
+  await page.locator('.history-card').click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.locator('.denom').first().click();
+  await page.getByRole('button', { name: /Save/ }).click();
+  await expect.poll(() => page.evaluate(() => state.sessions[0].total)).toBe(original.total * 2);
+  await page.getByRole('button', { name: 'Count', exact: true }).click();
+  await page.getByRole('button', { name: /New count/ }).click();
+  await page.getByRole('button', { name: /Quick count/ }).click();
+  await page.locator('.denom').first().click();
+  await page.getByRole('button', { name: /Save/ }).click();
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(page.locator('.history-card')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.locator('.settings-section').filter({ hasText: 'Counting setup' }).locator('.list-tile').filter({ hasText: 'Backup and restore' }).click();
   await backupFile.setInputFiles(backupPath);
   await password.fill('Demo-only-42!');
   await confirm.click();
   await expect(page.locator('.toast.show')).toContainText(/saved/i);
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(page.locator('.history-card')).toHaveCount(2);
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const privacy = page.locator('.settings-section').filter({ hasText: 'Privacy' });
@@ -455,7 +474,7 @@ test('browser preview secondary settings, backup, blind count and exports remain
   await expect(page.locator('.pill')).toContainText(/Count locked/);
   await page.getByRole('button', { name: /Save/ }).click();
   await page.getByRole('button', { name: 'History', exact: true }).click();
-  await expect(page.locator('.history-card')).toHaveCount(2);
+  await expect(page.locator('.history-card')).toHaveCount(3);
   await page.locator('.history-card').first().click();
 
   const csvDownload = page.waitForEvent('download');
