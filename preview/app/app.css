@@ -312,7 +312,8 @@ html[data-theme="dark"] .signature-pad { background: #f7f8f6; }
 
 @media print {
   html, body, #root { overflow: visible; height: auto; }
-  .appbar, .nav, .count-bottom, .report-toolbar, .toast { display: none !important; }
+  body, .scaffold { background: #fff; }
+  .appbar, .nav, .count-bottom, .report-toolbar, .subpage-actions, .toast { display: none !important; }
   .scroll { overflow: visible; padding: 0; }
   .report-paper { box-shadow: none; }
 }

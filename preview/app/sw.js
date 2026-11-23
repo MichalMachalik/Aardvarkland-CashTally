@@ -1,12 +1,12 @@
 const scope = new URL(self.registration.scope);
 const cachePrefix = `cashtally-preview:${scope.pathname}:`;
-const cacheName = `${cachePrefix}30`;
+const cacheName = `${cachePrefix}31`;
 const shell = new URL('index.html', scope);
 const flags = 'eu in us id pk ng br ru mx jp eg tr th gb za kr dz ar ca ua pl my sa au ae cz se il hu ch dk no de fr it es nl be at bg pt gr fi ie sk hr lt si lv ee cy lu mt';
 const assets = [
-  './index.html', './app.css?brand=8', './flags.js?brand=3', './app.js?entry=mobile-preview-v14',
+  './index.html', './app.css?brand=9', './flags.js?brand=3', './app.js?entry=mobile-preview-v15',
   './currency-data.js', './weight-data.js', './locales.js', './locale-overrides.js',
-  './locale-extras.js', './locale-detail-extras.js', './locale-actions.js', './locale-report-extras.js',
+  './locale-extras.js', './locale-detail-extras.js', './locale-actions.js', './locale-report-extras.js?v=2',
   './locale-functional-extras.js?v=2', './manifest.webmanifest', './assets/aardvarkland-mark.png',
   './assets/materialicons-regular.otf',
   ...flags.split(' ').map((id) => `./assets/flags/${id}.svg`),

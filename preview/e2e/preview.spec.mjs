@@ -485,6 +485,13 @@ test('browser preview secondary settings, backup, blind count and exports remain
   await page.evaluate(() => { window.__cashTallyPrintCalled = false; window.print = () => { window.__cashTallyPrintCalled = true; }; });
   await page.getByRole('button', { name: /PDF \/ Print/ }).click();
   await expect.poll(() => page.evaluate(() => window.__cashTallyPrintCalled)).toBe(true);
+  await page.emulateMedia({ media: 'print' });
+  const report = page.locator('.report-paper');
+  await expect(report).toBeVisible();
+  await expect(report.getByText('Created', { exact: true })).toBeVisible();
+  await expect(report.getByText('Last updated', { exact: true })).toBeVisible();
+  await expect(page.locator('.report-toolbar')).toBeHidden();
+  await expect(page.locator('.subpage-actions')).toBeHidden();
 });
 
 test('CSV download treats custom denomination labels as text', async ({ page }) => {
